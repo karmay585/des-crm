@@ -1,0 +1,56 @@
+version: "3.3"
+
+services:
+    des-crm-app:
+        build: # указание построить локальный образ
+            args: # аргументы, которые будут использованы в Dockerfile во время сборки
+                user: ${DOCKER_USER}
+                uid: 1000
+            context: ./_docker/php/8.3/         # расположение файла, на основе которго будет создан образ
+            dockerfile: Dockerfile              # файл, на основе которого будет создан образ
+        image: des-crm-app                     # имя, которое будет использоваться для создаваемого образа.
+        container_name: des-crm-app        # имя контейнера для этой службы
+        restart: unless-stopped
+        working_dir: /var/www/html/                # директория по умолчанию для этой службы
+        volumes:
+            - ./:/var/www/html                       # синхронизирует текущую директорию с контейнером var/www
+        networks:
+            - des-net
+
+
+    des-crm-nginx:
+        image: nginx:latest
+        container_name: des-crm-nginx
+        restart: unless-stopped
+        ports:
+            - "${DOCKER_APP_PORT}:80"                   # внешний порт 8000 на внутренний порт 80 контейнера
+        volumes:
+            - ./:/var/www/html
+            - ./_docker/nginx:/etc/nginx/conf.d
+        networks:
+            - des-net
+
+
+    des-crm-db:
+        image: mysql:8.3.0
+        container_name: des-crm-db
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_USER: ${DB_USERNAME}
+            SERVICES_TAGS: dev
+            SERVICES_NAME: mysql
+        volumes:
+            - ./_docker/mysql:/docker-entrypoint-initdb.d
+        networks:
+            - des-net
+
+
+
+
+
+networks:
+    des-net:
+        driver: bridge
