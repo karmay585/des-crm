@@ -17,7 +17,6 @@ services:
         networks:
             - des-net
 
-
     des-crm-nginx:
         image: nginx:latest
         container_name: des-crm-nginx
@@ -30,7 +29,6 @@ services:
         networks:
             - des-net
 
-
     des-crm-db:
         image: mysql:8.3.0
         container_name: des-crm-db
@@ -42,11 +40,31 @@ services:
             MYSQL_USER: ${DB_USERNAME}
             SERVICES_TAGS: dev
             SERVICES_NAME: mysql
-        volumes:
-            - ./_docker/mysql:/docker-entrypoint-initdb.d
         networks:
             - des-net
 
+    des-crm-redis:
+        image: redis:alpine
+        container_name: des-crm-redis
+        command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD}"
+        volumes:
+            - ./_docker/data/redis:/data
+        ports:
+            - "${DOCKER_REDIS_PORT}:6379"
+        networks:
+            - des-net
+
+    des-crm-node:
+        build:
+            context: ./_docker/node
+            dockerfile: Dockerfile
+        container_name: des-crm-node
+        tty: true
+        ports:
+            - "${DOCKER_NODE_PORT}:5173"
+        working_dir: /var/www/html
+        volumes:
+            - ./:/var/www/html
 
 networks:
     des-net:
