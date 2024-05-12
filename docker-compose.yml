@@ -1,0 +1,71 @@
+version: "3.3"
+
+services:
+    des-crm-app:
+        build: # указание построить локальный образ
+            args: # аргументы, которые будут использованы в Dockerfile во время сборки
+                user: ${DOCKER_USER}
+                uid: 1000
+            context: ./_docker/php/8.3/
+            dockerfile: Dockerfile
+        image: des-crm-app
+        container_name: des-crm-app
+        restart: unless-stopped
+        working_dir: /var/www/html/
+        volumes:
+            - ./:/var/www/html
+        networks:
+            - des-net
+
+    des-crm-nginx:
+        image: nginx:latest
+        container_name: des-crm-nginx
+        restart: unless-stopped
+        ports:
+            - "${DOCKER_APP_PORT}:80"
+        volumes:
+            - ./:/var/www/html
+            - ./_docker/nginx:/etc/nginx/conf.d
+        networks:
+            - des-net
+
+    des-crm-db:
+        image: mysql:8.3.0
+        container_name: des-crm-db
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_USER: ${DB_USERNAME}
+            SERVICES_TAGS: dev
+            SERVICES_NAME: mysql
+        networks:
+            - des-net
+
+    des-crm-redis:
+        image: redis:alpine
+        container_name: des-crm-redis
+        command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD}"
+        volumes:
+            - ./_docker/data/redis:/data
+        ports:
+            - "${DOCKER_REDIS_PORT}:6379"
+        networks:
+            - des-net
+
+    des-crm-node:
+        build:
+            context: ./_docker/node
+            dockerfile: Dockerfile
+        container_name: des-crm-node
+        tty: true
+        ports:
+            - "${DOCKER_NODE_PORT}:5173"
+        working_dir: /var/www/html
+        volumes:
+            - ./:/var/www/html
+
+networks:
+    des-net:
+        driver: bridge
